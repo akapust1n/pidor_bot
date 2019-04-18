@@ -1,6 +1,7 @@
 import os
 import json
 from random import choice
+import random
 import time
 import functools
 from datetime import datetime, timedelta
@@ -18,7 +19,8 @@ from phrases import (
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-logging.basicConfig(format='%(levelname)s [%(asctime)s] %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(levelname)s [%(asctime)s] %(message)s', level=logging.INFO)
 
 
 def requires_public_chat(func):
@@ -85,7 +87,8 @@ class Bot:
     @staticmethod
     def error_handler(bot, update, telegram_error):
         chat = update.message.chat
-        logging.error('[Chat: {}] Got error {}: {}'.format(chat.id, type(telegram_error), telegram_error))
+        logging.error('[Chat: {}] Got error {}: {}'.format(
+            chat.id, type(telegram_error), telegram_error))
 
     def load_memory(self):
         try:
@@ -119,13 +122,15 @@ class Bot:
     def add_player(self, chat_id, user_id):
         memory = self.get_memory(chat_id)
         memory['players'].add(user_id)
-        logging.info('[Chat: {}] Updated players list: {}'.format(chat_id, list(memory['players'])))
+        logging.info('[Chat: {}] Updated players list: {}'.format(
+            chat_id, list(memory['players'])))
         self.commit_memory()
 
     def remove_player(self, chat_id, user_id):
         memory = self.get_memory(chat_id)
         memory['players'].remove(user_id)
-        logging.info('[Chat: {}] Updated players list: {}'.format(chat_id, list(memory['players'])))
+        logging.info('[Chat: {}] Updated players list: {}'.format(
+            chat_id, list(memory['players'])))
         self.commit_memory()
 
     @staticmethod
@@ -155,7 +160,8 @@ class Bot:
         for date, user_id in winners_by_date:
             winners_by_id.setdefault(user_id, []).append(date)
         logging.info(winners_by_id)
-        sorted_winners = sorted(winners_by_id.items(), key=lambda x: (-len(x[1]), min(x[1])))
+        sorted_winners = sorted(winners_by_id.items(),
+                                key=lambda x: (-len(x[1]), min(x[1])))
         return list(map(lambda x: (x[0], len(x[1])), sorted_winners))[:10]
 
     @staticmethod
@@ -183,9 +189,11 @@ class Bot:
             text = [stats_phrases['header'], '']
             for i, (winner_id, victories_cnt) in enumerate(winners):
                 text.append(stats_phrases['template'].format(num=i + 1,
-                                                             name=self.get_username(chat, winner_id, call=False),
+                                                             name=self.get_username(
+                                                                 chat, winner_id, call=False),
                                                              cnt=victories_cnt))
-            text += ['', stats_phrases['footer'].format(players_cnt=len(self.get_players(chat.id)))]
+            text += ['', stats_phrases['footer'].format(
+                players_cnt=len(self.get_players(chat.id)))]
             self.send_answer(bot, chat.id, text='\n'.join(text))
         else:
             self.send_answer(bot, chat.id, template='no_winners')
@@ -198,7 +206,8 @@ class Bot:
         players = self.get_players(chat.id)
         if len(players) > 0:
             for i in range(0, len(players), 10):
-                players = [self.get_username(chat, player_id) for player_id in players[i:i+10]]
+                players = [self.get_username(chat, player_id)
+                           for player_id in players[i:i+10]]
                 text = ' '.join(players)
                 if i == 0:
                     header = common_phrases['list_players_header']
@@ -242,7 +251,8 @@ class Bot:
 
         if current_winner is not None:
             username = self.get_username(message.chat, user_id=current_winner)
-            self.send_answer(bot, chat.id, template='winner_known', name=username)
+            self.send_answer(
+                bot, chat.id, template='winner_known', name=username)
         else:
             players = self.get_players(chat.id)
             if len(players) == 0:
@@ -254,10 +264,17 @@ class Bot:
                     phrase = choice(scan_phrases[i])
                     self.send_answer(bot, chat.id, text=phrase)
                     time.sleep(1.5)
-                selected = choice(players)
+                playersCopy = players.copy()
+                numberOfShuffles = random.randint(1, 101)
+                for _ in range(numberOfShuffles):
+                    random.shuffle(playersCopy)
+
+                selected = choice(playersCopy)
                 self.set_current_winner(chat.id, selected)
-                selected_name = self.get_username(message.chat, user_id=selected)
-                last_phrase = choice(scan_phrases[-1]).format(name=selected_name)
+                selected_name = self.get_username(
+                    message.chat, user_id=selected)
+                last_phrase = choice(
+                    scan_phrases[-1]).format(name=selected_name)
                 self.send_answer(bot, chat.id, text=last_phrase)
 
     @logged
@@ -293,6 +310,7 @@ class Bot:
 if __name__ == '__main__':
     with open(os.path.join(SCRIPT_DIR, 'token.txt')) as token_file:
         token_ = token_file.readline().strip()
-    mem_filename = os.path.join(os.environ.get('MEMORY_DIR', SCRIPT_DIR), 'memory_dump.json')
+    mem_filename = os.path.join(os.environ.get(
+        'MEMORY_DIR', SCRIPT_DIR), 'memory_dump.json')
     bot_ = Bot(token=token_, memory_filename=mem_filename)
     bot_.start_polling()
