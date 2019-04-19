@@ -6,6 +6,10 @@ import time
 import functools
 from datetime import datetime, timedelta
 import logging
+import requests
+import json
+from datetime import datetime, timedelta
+
 
 from telegram.ext import Updater, CommandHandler  # MessageHandler, filters
 from telegram.chat import Chat
@@ -69,7 +73,8 @@ class Bot:
             CommandHandler('pidunreg', self.unreg),
             CommandHandler('pidor', self.choose_winner),
             CommandHandler('pidostats', self.stats),
-           # CommandHandler('all', self.list_players),
+            CommandHandler('rollBan', self.rollBan),
+            # CommandHandler('all', self.list_players),
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
@@ -215,6 +220,23 @@ class Bot:
                 self.send_answer(bot, chat.id, text=text)
         else:
             self.send_answer(bot, chat.id, template='no_players')
+
+   # @requires_public_chat
+    def rollBan(self, bot, update):
+        message = update.message
+        chat = message.chat
+        userid = message.from_user.id
+        answer_template = ""
+        r = requests.get(
+            "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand")
+        if(r.status_code == 200):
+            y = json.loads(x)
+            answer_template = y['contents']
+        self.send_answer(bot, chat.id, template=answer_template)
+        self.send_answer(bot, chat.id, template="Banned for n hours!")
+        nine_hours_from_now = datetime.now() + timedelta(hours=9)
+        bot.restrict_chat_member(
+            chat_id=chat.id, user_id=userid, until_date=nine_hours_from_now)
 
     @logged
     @requires_public_chat
