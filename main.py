@@ -6,6 +6,10 @@ import time
 import functools
 from datetime import datetime, timedelta
 import logging
+import requests
+import json
+from datetime import datetime, timedelta
+
 
 from telegram.ext import Updater, CommandHandler  # MessageHandler, filters
 from telegram.chat import Chat
@@ -69,7 +73,8 @@ class Bot:
             CommandHandler('pidunreg', self.unreg),
             CommandHandler('pidor', self.choose_winner),
             CommandHandler('pidostats', self.stats),
-           # CommandHandler('all', self.list_players),
+            CommandHandler('rollBan', self.rollBan),
+            # CommandHandler('all', self.list_players),
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
@@ -215,6 +220,30 @@ class Bot:
                 self.send_answer(bot, chat.id, text=text)
         else:
             self.send_answer(bot, chat.id, template='no_players')
+
+   # @requires_public_chat
+    def rollBan(self, bot, update):
+        message = update.message
+        chat = message.chat
+        userid = message.from_user.id
+        answer_template = ""
+        r = requests.get(
+            "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand")
+        if(r.status_code == 200):
+            temp = r.json()
+            y = temp[0]
+            answer_template = y['content']
+        answer_template="Спрос на баны по акции превысил наши ожидания. Поэтому раздача банов временно прекращена.Скоро мы вернемся с новыми крутыми предложениями! Stay tuned"
+        bot.send_message(chat_id = chat.id, text = answer_template)
+        banChance = random.randint(1,100)
+#        if(banChance>70):
+ #          num = random.randint(15,60)
+ #          banned_text = "[АКЦИЯ ДО КОНЦА ВЫХОДНЫХ. Получи двойное время бана по цене одного! Banned for " + str(num) + " x2  minutes!"
+#           num = num*2
+ #          bot.send_message(chat_id =  chat.id, text = banned_text)
+   #        hours_from_now = datetime.now() + timedelta(minutes=num)
+    #       bot.restrict_chat_member(
+     #          chat_id=chat.id, user_id=userid, until_date=hours_from_now)
 
     @logged
     @requires_public_chat
