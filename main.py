@@ -69,7 +69,7 @@ class Bot:
             CommandHandler('pidunreg', self.unreg),
             CommandHandler('pidor', self.choose_winner),
             CommandHandler('pidostats', self.stats),
-            CommandHandler('all', self.list_players),
+           # CommandHandler('all', self.list_players),
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
