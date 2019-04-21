@@ -5,6 +5,7 @@ import random
 import time
 import functools
 from datetime import datetime, timedelta
+import datetime
 import logging
 import requests
 import json
@@ -230,13 +231,29 @@ class Bot:
         r = requests.get(
             "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand")
         if(r.status_code == 200):
-            y = json.loads(x)
-            answer_template = y['contents']
-        self.send_answer(bot, chat.id, template=answer_template)
-        self.send_answer(bot, chat.id, template="Banned for n hours!")
-        nine_hours_from_now = datetime.now() + timedelta(hours=9)
+            temp = r.json()
+            y = temp[0]
+            answer_template = y['content']
+        releaseDate = datetime.date(2019, 4, 29)
+        now = datetime.datetime.now()
+        then = datetime.datetime(year=2019, month=4, day=29)
+        delta = now-then
+        banLen = 15
+        answer_template = "Сервис банов возобновит свою работу через " + \
+            time.mktime(delta.timetuple()) + " секунд. В качестве утешения держите бан на " + banLen " минут"
+        bot.send_message(chat_id=chat.id, text=answer_template)
+        hours_from_now = datetime.now() + timedelta(minutes=banLen)
         bot.restrict_chat_member(
-            chat_id=chat.id, user_id=userid, until_date=nine_hours_from_now)
+            chat_id=chat.id, user_id=userid, until_date=hours_from_now)
+        banChance = random.randint(1, 100)
+#        if(banChance>70):
+ #          num = random.randint(15,60)
+ #          banned_text = "[АКЦИЯ ДО КОНЦА ВЫХОДНЫХ. Получи двойное время бана по цене одного! Banned for " + str(num) + " x2  minutes!"
+#           num = num*2
+ #          bot.send_message(chat_id =  chat.id, text = banned_text)
+   #        hours_from_now = datetime.now() + timedelta(minutes=num)
+    #       bot.restrict_chat_member(
+     #          chat_id=chat.id, user_id=userid, until_date=hours_from_now)
 
     @logged
     @requires_public_chat
