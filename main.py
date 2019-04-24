@@ -54,12 +54,13 @@ def logged(func):
 
 
 class Bot:
-    def __init__(self, token, memory_filename):
+    def __init__(self, token, memory_filename, ban_filename):
         logging.info('Initializing bot...')
         self.updater = Updater(token=token)
         logging.info('Updater initialized')
 
         self.memory_filename = memory_filename
+        self.ban_filename = ban_filename
         self.memory = self.load_memory()
         logging.info('Memory loaded')
 
@@ -109,6 +110,26 @@ class Bot:
             chat_memory['players'] = set(chat_memory['players'])
             memory[int(chat_id)] = chat_memory
         return memory
+
+    def load_ban_memory(self):
+        try:
+            with open(self.ban_filename, 'r') as f:
+                raw_memory = json.load(f)
+        except:
+            raw_memory = {}
+        updatedate = raw_memory.get("updatetime")
+        if(updatedate is None):
+            raw_memory["updatetime"] = time.mktime(
+                datetime.today().timetuple())
+        date1 = datetime.fromtimestamp((int(raw_memory["updatetime"])))
+        dt = datetime.today()
+        if(date1.day != dt.day or updatedate is None):
+            with open(self.ban_filename, "w+") as f:
+                f.write(json.dumps({"updatetime": time.mktime(
+                    datetime.today().timetuple())}))
+        with open(self.ban_filename, 'r') as f:
+            raw_memory = json.load(f)
+        return raw_memory
 
     def get_memory(self, chat_id):
         return self.memory.setdefault(chat_id, {'players': set(), 'winners': {}})
@@ -174,9 +195,8 @@ class Bot:
     @staticmethod
     def get_username(chat, user_id, call=True):
         user = chat.get_member(user_id).user
-        print(user)
         username = user.username
-        if username != '':
+        if (username != '' or username is None):
             username = '{}{}'.format('@' if call else '', username)
         else:
             username = user.first_name or user.last_name or user_id
@@ -224,22 +244,65 @@ class Bot:
         else:
             self.send_answer(bot, chat.id, template='no_players')
 
-    def test(self, bot, update):
+    @requires_public_chat
+    def rollBan(self, bot, update):
+        random.seed(a=None, version=2)
         message = update.message
         chat = message.chat
         userid = message.from_user.id
-        answer_template = ""
-        r = requests.get(
-            "https://meme-api.herokuapp.com/gimme")
-        if(r.status_code == 200):
-            temp = r.json()
-            mem = temp['url']
-            if mem is not None:
-                bot.send_message(chat_id=chat.id, text=mem)
+        memoryRaw = self.load_ban_memory()
+        players = memoryRaw.get("players")
+        memory = {}
 
-       # @requires_public_chat
+        if(players is None):
+            memory["players"] = []
+        else:
+            memory["players"] = players
+        count = memory["players"].count(userid)
+        if(count > 4):
+            bot.send_message(
+                chat_id=chat.id, text="вы исчерпали свой лимит попыток на сегодня :(")
+        else:
+            memory["players"].append(userid)
 
-    def rollBan(self, bot, update):
+            with open(self.ban_filename, "w+") as f:
+                memoryRaw["players"] = memory["players"]
+                f.write(json.dumps(memoryRaw))
+
+            chance = random.randint(1, 1000)
+            rarity = "Common"
+            timeMinutes = 0
+            if(chance > 995):
+                rarity = "Вы выиграли легендарку, но я её ещё не заимлементил :("
+            if(chance > 950):
+                timeMinutes = random.randint(960, 1200)
+                rarity = "Mythical"
+            elif (chance > 900):
+                timeMinutes = random.randint(280, 360)
+                rarity = "Rare"
+            elif(chance > 650):
+                timeMinutes = random.randint(60, 120)
+                rarity = "Uncommon"
+            else:
+                timeMinutes = random.randint(10, 20)
+
+            time_from_now = datetime.now() + timedelta(minutes=timeMinutes)
+            answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
+                chance, rarity)
+
+            r = requests.get(
+                "https://meme-api.herokuapp.com/gimme")
+            if(r.status_code == 200):
+                temp = r.json()
+                mem = temp['url']
+                if mem is not None:
+                    bot.send_message(chat_id=chat.id, text=mem)
+                    bot.send_message(
+                        chat_id=chat.id, text=answer, parse_mode='Markdown')
+                    bot.restrict_chat_member(
+                        chat_id=chat.id, user_id=userid, until_date=time_from_now)
+
+    def test(self, bot, update):
         # message = update.message
         # chat = message.chat
         # userid = message.from_user.id
@@ -262,7 +325,7 @@ class Bot:
        # hours_from_now = datetime.now() + timedelta(minutes=banLen)
         # bot.restrict_chat_member(
         #   chat_id=chat.id, user_id=userid, until_date=hours_from_now)
-        #banChance = random.randint(1, 100)
+        # banChance = random.randint(1, 100)
 #        if(banChance>70):
  #          num = random.randint(15,60)
  #          banned_text = "[АКЦИЯ ДО КОНЦА ВЫХОДНЫХ. Получи двойное время бана по цене одного! Banned for " + str(num) + " x2  minutes!"
@@ -301,13 +364,13 @@ class Bot:
     @logged
     @requires_public_chat
     def choose_winner(self, bot, update):
+        random.seed(a=None, version=2)
         message = update.message
         chat = message.chat
         current_winner = self.get_current_winner(chat.id)
 
         if current_winner is not None:
             user = chat.get_member(current_winner).user
-            print(user)
             username = self.get_username(message.chat, user_id=current_winner)
             self.send_answer(
                 bot, chat.id, template='winner_known', name=username)
@@ -368,7 +431,11 @@ class Bot:
 if __name__ == '__main__':
     with open(os.path.join(SCRIPT_DIR, 'token.txt')) as token_file:
         token_ = token_file.readline().strip()
+
     mem_filename = os.path.join(os.environ.get(
         'MEMORY_DIR', SCRIPT_DIR), 'memory_dump.json')
-    bot_ = Bot(token=token_, memory_filename=mem_filename)
+    ban_filename = os.path.join(os.environ.get(
+        'MEMORY_DIR', SCRIPT_DIR), 'ban_dump.json')
+    bot_ = Bot(token=token_, memory_filename=mem_filename,
+               ban_filename=ban_filename)
     bot_.start_polling()
