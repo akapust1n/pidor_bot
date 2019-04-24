@@ -75,6 +75,7 @@ class Bot:
             CommandHandler('pidor', self.choose_winner),
             CommandHandler('pidostats', self.stats),
             CommandHandler('rollBan', self.rollBan),
+            CommandHandler('test', self.test),
             # CommandHandler('all', self.list_players),
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
@@ -173,6 +174,7 @@ class Bot:
     @staticmethod
     def get_username(chat, user_id, call=True):
         user = chat.get_member(user_id).user
+        print(user)
         username = user.username
         if username != '':
             username = '{}{}'.format('@' if call else '', username)
@@ -222,30 +224,45 @@ class Bot:
         else:
             self.send_answer(bot, chat.id, template='no_players')
 
-   # @requires_public_chat
-    def rollBan(self, bot, update):
+    def test(self, bot, update):
         message = update.message
         chat = message.chat
         userid = message.from_user.id
         answer_template = ""
         r = requests.get(
-            "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand")
+            "https://meme-api.herokuapp.com/gimme")
         if(r.status_code == 200):
             temp = r.json()
-            y = temp[0]
-            answer_template = y['content']
-        releaseDate = datetime.date(2019, 4, 29)
-        now = datetime.datetime.now()
-        then = datetime.datetime(year=2019, month=4, day=29)
-        delta = now-then
-        banLen = 15
-        answer_template = "Сервис банов возобновит свою работу через " + \
-            time.mktime(delta.timetuple()) + " секунд. В качестве утешения держите бан на " + banLen " минут"
-        bot.send_message(chat_id=chat.id, text=answer_template)
-        hours_from_now = datetime.now() + timedelta(minutes=banLen)
-        bot.restrict_chat_member(
-            chat_id=chat.id, user_id=userid, until_date=hours_from_now)
-        banChance = random.randint(1, 100)
+            mem = temp['url']
+            if mem is not None:
+                bot.send_message(chat_id=chat.id, text=mem)
+
+       # @requires_public_chat
+
+    def rollBan(self, bot, update):
+        # message = update.message
+        # chat = message.chat
+        # userid = message.from_user.id
+        # answer_template = ""
+        # r = requests.get(
+        #     "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand")
+        # if(r.status_code == 200):
+        #     temp = r.json()
+        #     y = temp[0]
+        #     answer_template = y['content']
+        # releaseDate = datetime.date(2019, 4, 29)
+        # now = datetime.datetime.now()
+        # then = datetime.datetime(year=2019, month=4, day=29)
+        # delta = now-then
+        # banLen = 15
+        # answer_template = "Сервис банов возобновит свою работу через " + \
+        #     time.mktime(delta.timetuple()) + " секунд. В качестве утешения держите бан на " + banLen " минут"
+        bot.send_message(chat_id=update.message.chat.id,
+                         text='сервис временно отключен')
+       # hours_from_now = datetime.now() + timedelta(minutes=banLen)
+        # bot.restrict_chat_member(
+        #   chat_id=chat.id, user_id=userid, until_date=hours_from_now)
+        #banChance = random.randint(1, 100)
 #        if(banChance>70):
  #          num = random.randint(15,60)
  #          banned_text = "[АКЦИЯ ДО КОНЦА ВЫХОДНЫХ. Получи двойное время бана по цене одного! Banned for " + str(num) + " x2  minutes!"
@@ -289,6 +306,8 @@ class Bot:
         current_winner = self.get_current_winner(chat.id)
 
         if current_winner is not None:
+            user = chat.get_member(current_winner).user
+            print(user)
             username = self.get_username(message.chat, user_id=current_winner)
             self.send_answer(
                 bot, chat.id, template='winner_known', name=username)
