@@ -259,7 +259,7 @@ class Bot:
         else:
             memory["players"] = players
         count = memory["players"].count(userid)
-        if(count > 4):
+        if(count > 3):
             bot.send_message(
                 chat_id=chat.id, text="вы исчерпали свой лимит попыток на сегодня :(")
         else:
@@ -288,7 +288,7 @@ class Bot:
 
             time_from_now = datetime.now() + timedelta(minutes=timeMinutes)
             answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
-                chance, rarity)
+                rarity, timeMinutes)
 
             r = requests.get(
                 "https://meme-api.herokuapp.com/gimme")
