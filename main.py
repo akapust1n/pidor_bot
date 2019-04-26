@@ -273,7 +273,13 @@ class Bot:
             rarity = "Common"
             timeMinutes = 0
             if(chance > 995):
-                rarity = "Вы выиграли легендарку, но я её ещё не заимлементил :("
+
+                rarity = "Legendary"
+                bot.send_message(chat_id=chat.id, text="ЛЕГЕНДА!!!!!!")
+                bot.send_message(
+                    chat_id=chat.id, text="https://www.youtube.com/watch?v=Dqf1BmN4Dag !!!!!!")
+                bot.send_message(
+                    chat_id=chat.id, text="Ваш ЛЕГЕНДАРНЫЙ приз будет зачислен вам в ближайшее время.")
             if(chance > 950):
                 timeMinutes = random.randint(960, 1200)
                 rarity = "Mythical"
@@ -287,8 +293,9 @@ class Bot:
                 timeMinutes = random.randint(10, 20)
 
             time_from_now = datetime.now() + timedelta(minutes=timeMinutes)
-            answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
-                rarity, timeMinutes)
+            if(rarity != "legendary"):
+                answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
+                    rarity, timeMinutes)
 
             r = requests.get(
                 "https://meme-api.herokuapp.com/gimme")
