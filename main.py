@@ -298,16 +298,14 @@ class Bot:
                     rarity, timeMinutes)
 
             r = requests.get(
-                "https://meme-api.herokuapp.com/gimme")
+                "https://meme-reddit-api.herokuapp.com/gimme/animememes")
             if(r.status_code == 200):
                 temp = r.json()
                 mem = temp['url']
                 if mem is not None:
                     bot.send_message(chat_id=chat.id, text=mem)
-                    bot.send_message(
-                        chat_id=chat.id, text=answer, parse_mode='Markdown')
-                    bot.restrict_chat_member(
-                        chat_id=chat.id, user_id=userid, until_date=time_from_now)
+            bot.send_message(chat_id=chat.id, text=answer, parse_mode='Markdown')
+            bot.restrict_chat_member(chat_id=chat.id, user_id=userid, until_date=time_from_now)
 
     def test(self, bot, update):
         # message = update.message
