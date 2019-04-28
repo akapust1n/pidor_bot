@@ -196,7 +196,7 @@ class Bot:
     def get_username(chat, user_id, call=True):
         user = chat.get_member(user_id).user
         username = user.username
-        if (username != '' or username is None):
+        if (username != '' or username is not None):
             username = '{}{}'.format('@' if call else '', username)
         else:
             username = user.first_name or user.last_name or user_id
@@ -250,6 +250,13 @@ class Bot:
         message = update.message
         chat = message.chat
         userid = message.from_user.id
+
+        member = chat.get_member(int(userid))
+        if member is None or member.can_send_messages is False:
+            bot.send_message(
+                chat_id=chat.id, text="вы уже забанены 👀")
+            return
+
         memoryRaw = self.load_ban_memory()
         players = memoryRaw.get("players")
         memory = {}
@@ -298,14 +305,16 @@ class Bot:
                     rarity, timeMinutes)
 
             r = requests.get(
-                "https://meme-reddit-api.herokuapp.com/gimme/animememes")
+                "https://meme-api.herokuapp.com/gimme")
             if(r.status_code == 200):
                 temp = r.json()
                 mem = temp['url']
                 if mem is not None:
                     bot.send_message(chat_id=chat.id, text=mem)
-            bot.send_message(chat_id=chat.id, text=answer, parse_mode='Markdown')
-            bot.restrict_chat_member(chat_id=chat.id, user_id=userid, until_date=time_from_now)
+                    bot.send_message(
+                        chat_id=chat.id, text=answer, parse_mode='Markdown')
+                    bot.restrict_chat_member(
+                        chat_id=chat.id, user_id=userid, until_date=time_from_now)
 
     def test(self, bot, update):
         # message = update.message
