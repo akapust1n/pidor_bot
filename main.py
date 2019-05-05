@@ -196,7 +196,7 @@ class Bot:
     def get_username(chat, user_id, call=True):
         user = chat.get_member(user_id).user
         username = user.username
-        if (username != '' or username is not None):
+        if (username != '' and username is not None):
             username = '{}{}'.format('@' if call else '', username)
         else:
             username = user.first_name or user.last_name or user_id
@@ -279,7 +279,7 @@ class Bot:
             chance = random.randint(1, 1000)
             rarity = "Common"
             timeMinutes = 0
-            if(chance > 995):
+            if(chance > 997):
 
                 rarity = "Legendary"
                 bot.send_message(chat_id=chat.id, text="ЛЕГЕНДА!!!!!!")
@@ -287,10 +287,10 @@ class Bot:
                     chat_id=chat.id, text="https://www.youtube.com/watch?v=Dqf1BmN4Dag !!!!!!")
                 bot.send_message(
                     chat_id=chat.id, text="Ваш ЛЕГЕНДАРНЫЙ приз будет зачислен вам в ближайшее время.")
-            if(chance > 950):
+            if(chance > 970):
                 timeMinutes = random.randint(960, 1200)
                 rarity = "Mythical"
-            elif (chance > 900):
+            elif (chance > 880):
                 timeMinutes = random.randint(280, 360)
                 rarity = "Rare"
             elif(chance > 650):
@@ -317,37 +317,12 @@ class Bot:
                         chat_id=chat.id, user_id=userid, until_date=time_from_now)
 
     def test(self, bot, update):
-        # message = update.message
-        # chat = message.chat
-        # userid = message.from_user.id
-        # answer_template = ""
-        # r = requests.get(
-        #     "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand")
-        # if(r.status_code == 200):
-        #     temp = r.json()
-        #     y = temp[0]
-        #     answer_template = y['content']
-        # releaseDate = datetime.date(2019, 4, 29)
-        # now = datetime.datetime.now()
-        # then = datetime.datetime(year=2019, month=4, day=29)
-        # delta = now-then
-        # banLen = 15
-        # answer_template = "Сервис банов возобновит свою работу через " + \
-        #     time.mktime(delta.timetuple()) + " секунд. В качестве утешения держите бан на " + banLen " минут"
-        bot.send_message(chat_id=update.message.chat.id,
-                         text='сервис временно отключен')
-       # hours_from_now = datetime.now() + timedelta(minutes=banLen)
-        # bot.restrict_chat_member(
-        #   chat_id=chat.id, user_id=userid, until_date=hours_from_now)
-        # banChance = random.randint(1, 100)
-#        if(banChance>70):
- #          num = random.randint(15,60)
- #          banned_text = "[АКЦИЯ ДО КОНЦА ВЫХОДНЫХ. Получи двойное время бана по цене одного! Banned for " + str(num) + " x2  minutes!"
-#           num = num*2
- #          bot.send_message(chat_id =  chat.id, text = banned_text)
-   #        hours_from_now = datetime.now() + timedelta(minutes=num)
-    #       bot.restrict_chat_member(
-     #          chat_id=chat.id, user_id=userid, until_date=hours_from_now)
+        print("test")
+        message = update.message
+        chat = message.chat
+        arr = []  # determine pairs userid-username
+        for i in arr:
+            self.get_username(message.chat, user_id=i)
 
     @logged
     @requires_public_chat
