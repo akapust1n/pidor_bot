@@ -77,7 +77,7 @@ class Bot:
             CommandHandler('pidostats', self.stats),
             CommandHandler('rollBan', self.rollBan),
             CommandHandler('test', self.test),
-            # CommandHandler('all', self.list_players),
+            CommandHandler('pidostats_lifetime', self.get_top_winners_all),
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
@@ -180,6 +180,33 @@ class Bot:
         logging.info('[Chat: {}] Updated winners: {}'.format(chat_id, winners))
         self.commit_memory()
 
+    @requires_public_chat
+    def get_top_winners_all(self, bot, update):  # копипаста -плохо
+        message = update.message
+        chat = message.chat
+        chat_id = chat.id
+        winners_by_date = self.get_memory(chat_id)['winners'].items()
+        winners_by_id = {}
+        for date, user_id in winners_by_date:
+            winners_by_id.setdefault(user_id, []).append(date)
+        logging.info(winners_by_id)
+        sorted_winners = sorted(winners_by_id.items(),
+                                key=lambda x: (-len(x[1]), min(x[1])))
+        winners = list(map(lambda x: (x[0], len(x[1])), sorted_winners))[:10]
+
+        if len(winners) > 0:
+            text = [stats_phrases['header_all'], '']
+            for i, (winner_id, victories_cnt) in enumerate(winners):
+                text.append(stats_phrases['template'].format(num=i + 1,
+                                                             name=self.get_username(
+                                                                 chat, winner_id, call=False),
+                                                             cnt=victories_cnt))
+            text += ['', stats_phrases['footer'].format(
+                players_cnt=len(self.get_players(chat.id)))]
+            self.send_answer(bot, chat.id, text='\n'.join(text))
+        else:
+            self.send_answer(bot, chat.id, template='no_winners')
+
     def get_top_winners_of_the_month(self, chat_id):
         current_month = self.get_current_date()[:-3]
         winners_by_date = filter(lambda x: x[0].startswith(current_month),
@@ -250,6 +277,8 @@ class Bot:
         message = update.message
         chat = message.chat
         userid = message.from_user.id
+        winners = self.get_top_winners_of_the_month(
+            chat.id)  # todo кэширование
 
         member = chat.get_member(int(userid))
         if member is None or member.can_send_messages is False:
@@ -266,9 +295,20 @@ class Bot:
         else:
             memory["players"] = players
         count = memory["players"].count(userid)
-        if(count > 3):
+
+        currentMonthWictories = 0
+        for i, (winner_id, victories_cnt) in enumerate(winners):
+            if winner_id == userid:
+                currentMonthWictories = victories_cnt
+
+        personalCount = 2 + currentMonthWictories
+        if(count > personalCount):
+            chance = random.randint(1, 2)
+            text = "вы исчерпали свой лимит попыток на сегодня :("
+            if chance > 1:
+                text = text + " Играйте в пидора дня и получайте больше роллов!"
             bot.send_message(
-                chat_id=chat.id, text="вы исчерпали свой лимит попыток на сегодня :(")
+                chat_id=chat.id, text=text)
         else:
             memory["players"].append(userid)
 
