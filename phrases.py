@@ -36,8 +36,11 @@ common_phrases = {
 stats_phrases = {
     'header': 'Топ-10 <b>пидоров</b> за текущий месяц:',
     'header_all': 'Топ-10 <b>пидоров</b> за все время:',
+    'header_lootcrate1': 'Топ-10 владельцев сундука #1',
     'template': '<b>{num}</b>. {name} — <i>{cnt} раз(а)</i>',
-    'footer': 'Всего участников — <i>{players_cnt}</i>'
+    'template_lootcrate': '<b>{num}</b>. {name} — <i>{cnt} шт</i>',
+    'footer': 'Всего участников — <i>{players_cnt}</i>',
+    'footer_lootcrate': 'Всего владельцев — <i>{players_cnt}</i>'
 }
 
 scan_phrases = [

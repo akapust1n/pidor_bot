@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 from telegram.ext import Updater, CommandHandler  # MessageHandler, filters
 from telegram.chat import Chat
+from lootcrate import LootCrates
 
 from phrases import (
     GAME_RULES,
@@ -54,7 +55,7 @@ def logged(func):
 
 
 class Bot:
-    def __init__(self, token, memory_filename, ban_filename):
+    def __init__(self, token, memory_filename, ban_filename, lootcrate_filename):
         logging.info('Initializing bot...')
         self.updater = Updater(token=token)
         logging.info('Updater initialized')
@@ -62,6 +63,7 @@ class Bot:
         self.memory_filename = memory_filename
         self.ban_filename = ban_filename
         self.memory = self.load_memory()
+        self.lootCrates = LootCrates(lootcrate_filename)
         logging.info('Memory loaded')
 
         self.today = None
@@ -76,8 +78,11 @@ class Bot:
             CommandHandler('pidor', self.choose_winner),
             CommandHandler('pidostats', self.stats),
             CommandHandler('rollBan', self.rollBan),
-            CommandHandler('test', self.test),
+            #CommandHandler('test', self.test),
+            #CommandHandler('test2', self.test2),
             CommandHandler('pidostats_lifetime', self.get_top_winners_all),
+            CommandHandler('listlootcrates', self.list_lootcrates),
+            CommandHandler('openlootcrate', self.openlootcrate),
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
@@ -301,7 +306,7 @@ class Bot:
             if winner_id == userid:
                 currentMonthWictories = victories_cnt
 
-        personalCount = 2 + currentMonthWictories
+        personalCount = 3 + currentMonthWictories
         if(count > personalCount):
             chance = random.randint(1, 2)
             text = "вы исчерпали свой лимит попыток на сегодня :("
@@ -319,6 +324,8 @@ class Bot:
             chance = random.randint(1, 1000)
             rarity = "Common"
             timeMinutes = 0
+
+            lootcrateChance = 300 if datetime.now().day == 12 else 150
             if(chance > 997):
 
                 rarity = "Legendary"
@@ -336,8 +343,11 @@ class Bot:
             elif(chance > 650):
                 timeMinutes = random.randint(60, 120)
                 rarity = "Uncommon"
-            else:
+            elif(chance > lootcrateChance):
                 timeMinutes = random.randint(10, 20)
+            else:
+                self.lootCrates.grantLootCrate(bot, chat.id, userid)
+                return
 
             time_from_now = datetime.now() + timedelta(minutes=timeMinutes)
             if(rarity != "legendary"):
@@ -357,12 +367,82 @@ class Bot:
                         chat_id=chat.id, user_id=userid, until_date=time_from_now)
 
     def test(self, bot, update):
-        print("test")
+        chat = update.message.chat
+        userid = update.message.from_user.id
+        self.lootCrates.addLootCrate(chat.id, userid, 1)
+
+    def test2(self, bot, update):
+        chat = update.message.chat
+        userid = update.message.from_user.id
+        # self.lootCrates.rmLootCrate(chat.id, userid, 1)
+        self.lootCrates.getLootCratesList(chat.id, 1)
+
+        # determine chatid
+        # message = update.message
+        # chat = message.chat
+        # arr = []  # determine pairs userid-username
+        # for i in arr:
+        # self.get_username(message.chat, user_id=i)
+    @requires_public_chat
+    def list_lootcrates(self, bot, update):
         message = update.message
         chat = message.chat
-        arr = []  # determine pairs userid-username
-        for i in arr:
-            self.get_username(message.chat, user_id=i)
+        chat_id = chat.id
+        players = self.lootCrates.getLootCratesList(chat_id, 1)
+        if(players is None):
+            self.send_answer(
+                bot, chat.id, text='На складе сундуков пусто! 🗑️')  # copypaste
+            return
+
+        sorted_players = sorted(
+            players.items(), key=lambda kv: kv[1], reverse=True)
+        sorted_players = sorted_players[:10]
+        if len(sorted_players) > 0:
+            text = [stats_phrases['header_lootcrate1'], '']
+            for i, (playerId, lootCrateCount) in enumerate(sorted_players):  # there should be
+                text.append(stats_phrases['template_lootcrate'].format(num=i + 1,
+                                                                       name=self.get_username(
+                                                                           chat, playerId, call=False),
+                                                                       cnt=lootCrateCount))
+           # text += ['', stats_phrases['footer_lootcrate'].format( TODO
+             #   players_cnt=len(self.get_players(chat.id)))]
+            self.send_answer(bot, chat.id, text='\n'.join(text))
+        else:
+            self.send_answer(bot, chat.id, text='На складе сундуков пусто! 🗑️')
+
+    @requires_public_chat
+    def openlootcrate(self, bot, update):
+        random.seed(a=None, version=2)
+        message = update.message
+        chat = message.chat
+        userid = update.message.from_user.id
+        chance = random.randint(1, 1000)
+        timeMinutes = 0
+
+        if(self.lootCrates.rmLootCrate(chat.id, userid, 1)):
+            # for lootcrate 1 . TODO resource system
+            if(chance > 990):  # todo normal chance
+                text = "Вы выиграли уникальный приз сундука #1! Приз будет зачислен в ближайшее время"
+                bot.send_message(chat_id=chat.id, text=text)
+                return
+
+            if(chance > 900):
+                timeMinutes = 24*60
+            elif (chance > 700):
+                timeMinutes = 6*60
+            elif(chance > 200):
+                timeMinutes = 3*60
+
+            time_from_now = datetime.now() + timedelta(minutes=timeMinutes)
+
+            answer = "Дроп: бан - {} минут!".format(timeMinutes)
+            bot.send_message(
+                chat_id=chat.id, text=answer, parse_mode='Markdown')
+            bot.restrict_chat_member(
+                chat_id=chat.id, user_id=userid, until_date=time_from_now)
+        else:
+            bot.send_message(
+                chat_id=chat.id, text="У вас нет сундуков 😢")
 
     @logged
     @requires_public_chat
@@ -465,6 +545,8 @@ if __name__ == '__main__':
         'MEMORY_DIR', SCRIPT_DIR), 'memory_dump.json')
     ban_filename = os.path.join(os.environ.get(
         'MEMORY_DIR', SCRIPT_DIR), 'ban_dump.json')
+    lootcrate_filename = os.path.join(os.environ.get(
+        'MEMORY_DIR', SCRIPT_DIR), 'lootcrate.json')
     bot_ = Bot(token=token_, memory_filename=mem_filename,
-               ban_filename=ban_filename)
+               ban_filename=ban_filename, lootcrate_filename=lootcrate_filename)
     bot_.start_polling()
