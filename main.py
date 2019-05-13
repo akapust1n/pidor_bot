@@ -78,11 +78,12 @@ class Bot:
             CommandHandler('pidor', self.choose_winner),
             CommandHandler('pidostats', self.stats),
             CommandHandler('rollBan', self.rollBan),
-            #CommandHandler('test', self.test),
-            #CommandHandler('test2', self.test2),
+            # CommandHandler('test', self.test),
+            # CommandHandler('test2', self.test2),
             CommandHandler('pidostats_lifetime', self.get_top_winners_all),
             CommandHandler('listlootcrates', self.list_lootcrates),
             CommandHandler('openlootcrate', self.openlootcrate),
+            CommandHandler('rmBan', self.rmBan)
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
@@ -212,7 +213,7 @@ class Bot:
         else:
             self.send_answer(bot, chat.id, template='no_winners')
 
-    def get_top_winners_of_the_month(self, chat_id):
+    def get_winners_of_the_month(self, chat_id, getAll):
         current_month = self.get_current_date()[:-3]
         winners_by_date = filter(lambda x: x[0].startswith(current_month),
                                  self.get_memory(chat_id)['winners'].items())
@@ -222,7 +223,10 @@ class Bot:
         logging.info(winners_by_id)
         sorted_winners = sorted(winners_by_id.items(),
                                 key=lambda x: (-len(x[1]), min(x[1])))
-        return list(map(lambda x: (x[0], len(x[1])), sorted_winners))[:10]
+        if(getAll):
+            return list(map(lambda x: (x[0], len(x[1])), sorted_winners))
+        else:
+            return list(map(lambda x: (x[0], len(x[1])), sorted_winners))[:10]
 
     @staticmethod
     def get_username(chat, user_id, call=True):
@@ -243,7 +247,7 @@ class Bot:
     def stats(self, bot, update):
         message = update.message
         chat = message.chat
-        winners = self.get_top_winners_of_the_month(chat.id)
+        winners = self.get_winners_of_the_month(chat.id, False)
 
         if len(winners) > 0:
             text = [stats_phrases['header'], '']
@@ -282,8 +286,8 @@ class Bot:
         message = update.message
         chat = message.chat
         userid = message.from_user.id
-        winners = self.get_top_winners_of_the_month(
-            chat.id)  # todo кэширование
+        winners = self.get_winners_of_the_month(
+            chat.id, True)  # todo кэширование
 
         member = chat.get_member(int(userid))
         if member is None or member.can_send_messages is False:
@@ -358,13 +362,20 @@ class Bot:
                 "https://meme-api.herokuapp.com/gimme")
             if(r.status_code == 200):
                 temp = r.json()
-                mem = temp['url']
+                if(temp.get("url") is None):
+                    r = requests.get(
+                        "https://meme-api.herokuapp.com/gimme")
+
+                mem = temp.get("url")
                 if mem is not None:
                     bot.send_message(chat_id=chat.id, text=mem)
-                    bot.send_message(
-                        chat_id=chat.id, text=answer, parse_mode='Markdown')
-                    bot.restrict_chat_member(
-                        chat_id=chat.id, user_id=userid, until_date=time_from_now)
+                else:
+                    bot.send_message(chat_id=chat.id, text="мемы сломались :(")
+
+            bot.send_message(
+                chat_id=chat.id, text=answer, parse_mode='Markdown')
+            bot.restrict_chat_member(
+                chat_id=chat.id, user_id=userid, until_date=time_from_now)
 
     def test(self, bot, update):
         chat = update.message.chat
@@ -377,12 +388,29 @@ class Bot:
         # self.lootCrates.rmLootCrate(chat.id, userid, 1)
         self.lootCrates.getLootCratesList(chat.id, 1)
 
+    @requires_public_chat
+    def rmBan(self, bot, update):
+        message = update.message
+        chat = message.chat
+        userid = message.from_user.id
+        if(userid != 71301900):
+            bot.send_message(
+                chat_id=chat.id, text="Недостаточно прав для вызова данной команды!")
+            return
+        userIdPromote = message.text.split()[1]
+        bot.restrictChatMember(
+            chat_id=chat.id, user_id=userIdPromote, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
+        bot.send_message(
+            chat_id=chat.id, text="Юзер {} разбанен!".format(self.get_username(
+                chat, userIdPromote, call=False)))
+
         # determine chatid
         # message = update.message
         # chat = message.chat
         # arr = []  # determine pairs userid-username
         # for i in arr:
         # self.get_username(message.chat, user_id=i)
+
     @requires_public_chat
     def list_lootcrates(self, bot, update):
         message = update.message
@@ -417,7 +445,7 @@ class Bot:
         chat = message.chat
         userid = update.message.from_user.id
         chance = random.randint(1, 1000)
-        timeMinutes = 0
+        timeMinutes = 2
 
         if(self.lootCrates.rmLootCrate(chat.id, userid, 1)):
             # for lootcrate 1 . TODO resource system
@@ -549,4 +577,5 @@ if __name__ == '__main__':
         'MEMORY_DIR', SCRIPT_DIR), 'lootcrate.json')
     bot_ = Bot(token=token_, memory_filename=mem_filename,
                ban_filename=ban_filename, lootcrate_filename=lootcrate_filename)
+
     bot_.start_polling()
